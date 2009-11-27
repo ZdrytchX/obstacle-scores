@@ -1,0 +1,325 @@
+body
+{
+    color: #E1E1E1;
+    background-color: #1E1E31;
+    text-align: center;
+}
+
+a:link
+{
+    color: #777777;
+}
+a:visited
+{
+    color: #777777;
+}
+a:hover
+{
+    color: #777777;
+}
+a:active
+{
+    color: #777777;
+}
+
+.separator
+{
+}
+
+.footer
+{
+}
+
+.navigation
+{
+    font-family: "Times New Roman", Times, serif;
+    font-size: large;
+    text-align: center;
+}
+
+.score
+{
+    font-family: "Times New Roman", Times, Sans-serif;
+    font-weight: 300;
+    text-align: center;
+}
+
+.topPlayers
+{
+}
+
+.player
+{
+    font-family: "Times New Roman", Times, Sans-serif;
+    font-weight: 300;
+    text-align: center;
+}
+
+.map
+{
+}
+
+.mapname
+{
+}
+
+.layoutname
+{
+}
+
+.armDescription
+{
+}
+
+.mediDescription
+{
+}
+
+.armTable
+{
+}
+
+.mediTable
+{
+}
+
+.playerTable
+{
+}
+
+.armHeader
+{
+    background-color: #1EAA31;
+}
+
+.mediHeader
+{
+    background-color: #AA1E31;
+}
+
+.playerHeader
+{
+    background-color: #131EC8;
+}
+
+.armScore1
+{
+    background-color: #2EBA41;
+}
+
+.armScore2
+{
+    background-color: #3ECA51;
+}
+
+.armScore3
+{
+    background-color: #4EDA61;
+}
+
+.armScore4
+{
+    background-color: #5EEA71;
+}
+
+.armScore5
+{
+    color: #1E1E31;
+    background-color: #6EFA81;
+}
+
+.armScore6
+{
+    color: #1E1E31;
+    background-color: #7EFF91;
+}
+
+.armScore7
+{
+    color: #1E1E31;
+    background-color: #8EFFA1;
+}
+
+.armScore8
+{
+    color: #1E1E31;
+    background-color: #9EFFB1;
+}
+
+.armScore9
+{
+    color: #1E1E31;
+    background-color: #AEFFC1;
+}
+
+.armScore10
+{
+    color: #1E1E31;
+    background-color: #BEFFD1;
+}
+
+.armScoreRest
+{
+    color: #1E1E31;
+    background-color: #CEFFE1;
+}
+
+.mediScore1
+{
+    background-color: #BA2E41;
+}
+
+.mediScore2
+{
+    background-color: #CA3E51;
+}
+
+.mediScore3
+{
+    background-color: #DA4E61;
+}
+
+.mediScore4
+{
+    background-color: #EA5E71;
+}
+
+.mediScore5
+{
+    color: #1E1E31;
+    background-color: #FA6E81;
+}
+
+.mediScore6
+{
+    color: #1E1E31;
+    background-color: #FF7E91;
+}
+
+.mediScore7
+{
+    color: #1E1E31;
+    background-color: #FF8EA1;
+}
+
+.mediScore8
+{
+    color: #1E1E31;
+    background-color: #FF9EB1;
+}
+
+.mediScore9
+{
+    color: #1E1E31;
+    background-color: #FFAEC1;
+}
+
+.mediScore10
+{
+    color: #1E1E31;
+    background-color: #FFBED1;
+}
+
+.mediScoreRest
+{
+    color: #1E1E31;
+    background-color: #FFCEE1;
+}
+
+.player1
+{
+    background-color: #232EE8;
+}
+
+.player2
+{
+    background-color: #333EF8;
+}
+
+.player3
+{
+    background-color: #434EFF;
+}
+
+.player4
+{
+    background-color: #535EFF;
+}
+
+.player5
+{
+    color: #1E1E31;
+    background-color: #636EFF;
+}
+
+.player6
+{
+    color: #1E1E31;
+    background-color: #737EFF;
+}
+
+.player7
+{
+    color: #1E1E31;
+    background-color: #838EFF;
+}
+
+.player8
+{
+    color: #1E1E31;
+    background-color: #939EFF;
+}
+
+.player9
+{
+    color: #1E1E31;
+    background-color: #A3AEFF;
+}
+
+.player10
+{
+    color: #1E1E31;
+    background-color: #B3BEFF;
+}
+
+.playerRest
+{
+    color: #1E1E31;
+    background-color: #C3CEFF;
+}
+
+.notice
+{
+}
+
+.search
+{
+}
+
+.searchBox
+{
+    color: #E1E1E1;
+    background-color: #1E1E31;
+    text-align: left;
+}
+
+.searchForm
+{
+    color: #E1E1E1;
+    background-color: #1E1E31;
+    text-align: left;
+}
+
+.searchReport
+{
+    color: #E1E1E1;
+    background-color: #1E1E31;
+    text-align: center;
+}
+
+.searchReport
+{
+    color: #E1E1E1;
+    background-color: #1E1E31;
+    text-align: left;
+}
