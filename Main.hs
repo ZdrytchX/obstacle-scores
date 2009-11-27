@@ -409,16 +409,16 @@ score vars mapname layoutname scoreType numLine (id, scoreLine) = do
 
 samePlayer :: Score -> Score -> Bool
 samePlayer (Score {s_guid = ag, s_ip = ai, s_adminName = aa}) (Score {s_guid = bg, s_ip = bi, s_adminName = ba})
-    | ag == bg                   = True
-    | ai == bi                   = True
+    | ag == bg && ag /= "guid"   = True
+    | ai == bi && ai /= "ip"     = True
     | aa == ba && aa /= "noname" = True
     | otherwise                  = False
 
 samePlayerCmp :: Score -> Score -> Ordering
 samePlayerCmp (Score {s_guid = ag, s_ip = ai, s_adminName = aa}) (Score {s_guid = bg, s_ip = bi, s_adminName = ba})
-    | ag /= bg                                     = ag `compare` bg
-    | ai /= bi                                     = ai `compare` bi
-    | aa /= ba && aa /= "noname" && ba /= "Noname" = aa `compare` ba
+    | ag /= bg && ag /= "guid"   && bg /= "guid"   = ag `compare` bg
+    | ai /= bi && ai /= "ip"     && ba /= "ip"     = ai `compare` bi
+    | aa /= ba && aa /= "noname" && ba /= "noname" = aa `compare` ba
     | otherwise                                    = EQ
 
 sl :: [(a, b)] -> [b]
