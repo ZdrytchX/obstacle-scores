@@ -15,7 +15,8 @@
 -}
 
 -- TODO: info-ratings.dat.tmp and then move / rename
--- TODO: set query (parameters as vars) regardless of GET or post
+-- TODO: vars 'x' (10 and 1 are always extreme-most)
+-- TODO: reads for '(x|y)'
 
 import Data.Bits
 import Data.Char
@@ -30,8 +31,9 @@ import Data.ByteString.Internal (c2w)
 
 import System.Posix.Files (getFileStatus, isSymbolicLink, readSymbolicLink)
 import System.FilePath.Posix ((</>))
-import System.IO (hClose, openFile, IOMode (ReadMode), hGetContents)
+import System.IO (hClose, openFile, IOMode (ReadMode), hGetContents, getContents)
 
+import Network.CGI
 import Network.CGI.Cookie ()
 import Network.CGI.Monad ()
 import Network.CGI.Protocol (getCGIVars)
@@ -115,23 +117,37 @@ scoreDateCmp (Score {s_date = ad}) (Score {s_date = bd}) =
            ad `compare` bd
 
 main = do
-    vars <- getCGIVars
+    vars     <- getCGIVars
+    contents <- getContents
 
-    let query = queryVars $ case List.lookup "QUERY_STRING" vars of
-                                 (Just something) -> something
-                                 (Nothing)        -> ""
+    let method = case List.lookup "REQUEST_METHOD" vars of
+                      (Just "GET")     -> "GET"
+                      (Just "POST")    -> "POST"
+                      -- (Just something) -> error $ "unsupported request method " ++ something
+                      (Just something) -> something
+                      (Nothing)        -> error $ "oc-stats should not be called from the command line"
+
+    let query = if method == "GET" then
+                    queryVars $ case List.lookup "QUERY_STRING" vars of
+                                     (Just something) -> something
+                                     (Nothing)        -> ""
+                else
+                    queryVars $ contents
 
     writeHeader query
 
-    -- write header
+    putStrNl . show $ query
+    putStrNl $ contents
+
     let action = case Map.lookup "action" query of
                      (Just action) -> action
                      _             -> "invalid"
 
-    case (List.map toLower action) of
-        "viewstats"       -> viewStats     query
-        "viewplayers"     -> viewPlayers   query
-        _                 -> defaultAction query
+    when (method == "GET" || method == "POST") $ do
+        case (List.map toLower action) of
+            "viewstats"       -> viewStats     query
+            "viewplayers"     -> viewPlayers   query
+            _                 -> defaultAction query
 
     writeFooter query
 
@@ -165,7 +181,7 @@ invalid vars = do
 viewStats :: Query -> IO ()
 viewStats vars = do
     let search = case Map.lookup "search" vars of
-                      (Just s)  -> unEscapeString . List.map (\x -> if x == '+' then ' ' else toLower x) $ s
+                      (Just s)  -> List.map (\x -> if x == '+' then ' ' else toLower x) $ s
                       (Nothing) -> ""
 
     putStr $ "<title>"
@@ -200,6 +216,12 @@ viewStats vars = do
                         numShowingUnq  = min 10 $ length playersUnq
                         players        = take 10 $ List.filter (not . null . (List.filter f) . snd) $ zip [1..] $ toPlayers allScores
 
+                    -- connect to DB
+                    connection <- connectMySQL defaultMySQLConnectInfo { mysqlHost = s "host", mysqlDatabase = s "database", mysqlUser = s "user", mysqlPassword = s "password" }
+
+                    when (isJust $ Map.lookup "rate" vars) $ do
+                        putStrNl $ "<p class=\"ratingNotice\">Rating is TODO!</p>"
+
                     -- print players
                     when (not $ List.null search) $ do
                         putStrNl $ "<p class=\"playerReport\">Found " ++ (show $ length playersUnq) ++ " players with map, layout, score, time, date, or name matching \"" ++ search ++ "\"; showing " ++ show numShowingUnq ++ ".</p>"
@@ -209,9 +231,6 @@ viewStats vars = do
                     putStrNl $ "<hr class=\"separator\" />"
 
                     -- print scores
-
-                    -- connect to DB
-                    connection <- connectMySQL defaultMySQLConnectInfo { mysqlHost = s "host", mysqlDatabase = s "database", mysqlUser = s "user", mysqlPassword = s "password" }
 
                     statement <- prepare connection $ "SELECT `id`, `mapname`, `layoutname` FROM `" ++ s "prefix" ++ "questions`"
 
@@ -233,7 +252,7 @@ viewStats vars = do
 viewPlayers :: Query -> IO ()
 viewPlayers vars = do
     let search = case Map.lookup "search" vars of
-                      (Just s)  -> unEscapeString . List.map (\x -> if x == '+' then ' ' else toLower x) $ s
+                      (Just s)  -> List.map (\x -> if x == '+' then ' ' else toLower x) $ s
                       (Nothing) -> ""
 
     putStr $ "<title>"
@@ -384,7 +403,7 @@ printScore vars connection questions first lastMap lastLayout lastType (Score {s
                                              "</div></div>"
                                          else
                                              ""
-                        putStrNl $ "<form action=\"" ++ url ++ "\" method=\"post\"><fieldset>" ++ partial ++ "<input type=\"hidden\" name=\"id\" value=\"" ++ show questionID ++ "\" /><input type=\"hidden\" name=\"rating\" value=\"" ++ show n ++ "\" /><input type=\"image\" src=\"" ++ img ++ "\" />" ++ partialEnd ++ "</fieldset></form>"
+                        putStrNl $ "<form action=\"" ++ url ++ "\" method=\"post\"><fieldset>" ++ partial ++ "<input type=\"hidden\" name=\"id\" value=\"" ++ show questionID ++ "\" /><input type=\"hidden\" name=\"rate\" value=\"True\" /><input type=\"hidden\" name=\"rating\" value=\"" ++ show n ++ "\" /><input type=\"image\" src=\"" ++ img ++ "\" />" ++ partialEnd ++ "</fieldset></form>"
                         fill $ succ n
                 putStrNl $ "<div class=\"rating\">"
                 fill 1
@@ -606,8 +625,17 @@ splitTwo delimiters = splitTwo' delimiters []
                     isNotDelimiter = (\x -> not $ x `elem` delimiters)
                     nextPart       = tailAlways . dropWhile isNotDelimiter
 
+splitTwo' :: String -> String -> [(String, String)]
+splitTwo' delimiters = twoify . wordsBy (`elem` delimiters)
+    where twoify :: [a] -> [(a, a)]
+          twoify xs = zip (snd . removeEveryOther $ xs) (fst . removeEveryOther $ xs)
+
+removeEveryOther :: [a] -> ([a], [a])
+removeEveryOther = foldr (\x ~(xs,ys) -> (ys, x:xs)) ([],[])
+
 queryVars :: String -> Query
-queryVars = Map.fromList . splitTwo "=&"
+queryVars = Map.fromList . List.map unescape . splitTwo' "=&"
+    where unescape (k, v) = (k, unEscapeString v)
 
 msec   :: Int   -> Int
 secs   :: Int   -> Int
