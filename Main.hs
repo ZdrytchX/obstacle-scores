@@ -16,6 +16,8 @@
 
 -- TODO: info-ratings.dat.tmp and then move / rename
 -- TODO: set query (parameters as vars) regardless of GET or post
+-- TODO: remember to update, or see if there's a mysql command to insert when no conditions meet the update
+-- TODO: partial stars
 
 import Data.Bits
 import Data.Char
@@ -366,13 +368,14 @@ printScore vars connection questions first lastMap lastLayout lastType (Score {s
                 execute statement [toSql questionID]
                 rows <- fetchAllRows' statement
                 let answers = rows
-                    average = round $ (fromIntegral (sum . map (fromSql . head) $ answers :: Int)) / (fromIntegral . length $ answers)
+                    average = floor $ (fromIntegral (sum . map (fromSql . head) $ answers :: Int)) / (fromIntegral . length $ answers)
+                    rem     = decimal $ (fromIntegral (sum . map (fromSql . head) $ answers :: Int)) / (fromIntegral . length $ answers)
                     fill 11 = return ()
                     fill n  = do
-                        let img = if n <= average then
-                                      "star.png"
-                                  else
-                                      "dark.png"
+                        let img   = if n <= average then
+                                        "star.png"
+                                    else
+                                        "faint.png"
                         putStrNl $ "<form action=\"" ++ url ++ "\" method=\"post\"><fieldset><input type=\"hidden\" name=\"id\" value=\"" ++ show questionID ++ "\" /><input type=\"hidden\" name=\"rating\" value=\"" ++ show n ++ "\" /><input type=\"image\" src=\"" ++ img ++ "\" /></fieldset></form>"
                         fill $ succ n
                 putStrNl $ "<div class=\"rating\">"
@@ -698,6 +701,9 @@ doesDirectoryExist' :: FilePath -> IO Bool
 doesDirectoryExist' filename = do
     realFilename <- resolve filename
     doesDirectoryExist realFilename
+
+decimal :: (RealFrac a) => a -> a
+decimal = snd . properFraction
 
 s v = case Map.lookup v db of
            (Just something) -> something
