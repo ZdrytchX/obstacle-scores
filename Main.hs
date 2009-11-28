@@ -146,7 +146,7 @@ writeFooter vars = do
 writeNavigation :: Query -> IO ()
 writeNavigation vars = do
     putStrNl $ "<form method=\"get\" action=\"" ++ url ++ "\" class=\"searchForm\"><div class=\"search\"><input type=\"text\" name=\"search\" class=\"searchBox\" /><input type=\"submit\" value=\"Search\" /><input type=\"reset\" /></div></form><p />"
-    putStrNl $ "<div class=\"navigation\"><a href=\"" ++ url ++ "?action=viewStats\">Records</a> | <a href=\"" ++ url ++ "?action=viewPlayers\">Players</a></div><p class=\"note\">Note: older records might not be shown</p><hr class=\"separator\" /><pre><br /><br /></pre>"
+    putStrNl $ "<div class=\"navigation\"><a href=\"" ++ url ++ "?action=viewStats\">Records</a> | <a href=\"" ++ url ++ "?action=viewPlayers\">Players</a></div><p class=\"note\">Note: older records may not be shown</p><hr class=\"separator\" /><pre><br /><br /></pre>"
 
 invalid :: Query -> IO ()
 invalid vars = do
