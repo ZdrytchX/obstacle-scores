@@ -37,6 +37,8 @@ a:active
     text-align: center;
 }
 
+.navigation a:link {color: #E1E1E1;} .navigation a:visited {color: #E1E1E1;} .navigation a:hover {color: #E1E1E1;} .navigation a:active {color: #E1E1E1;}
+
 .score
 {
     font-family: "Times New Roman", Times, Sans-serif;
@@ -230,6 +232,7 @@ a:active
 {
     background-color: #232EE8;
 }
+/*.player1 a:link {color: #E1E1E1;} .player1 a:visited {color: #E1E1E1;} .player1 a:hover {color: #E1E1E1;} .player1 a:active {color: #E1E1E1;}*/
 
 .player2
 {
@@ -317,12 +320,25 @@ div.rating form:after
     clear: left;
     content: ".";
     height: 0px;
+    width: 100%;
     visibility: hidden;
     display: block;
 }
 div.rating form fieldset
 {
     border: none;
+}
+
+.ratingPartialStar
+{
+    width: 64px;
+    background: url(faint.png) 0 0 repeat-x;
+}
+
+.ratingPartialStar div
+{
+    height: 64px;
+    background: url(star.png) 0 0 repeat-x;
 }
 
 .searchBox
