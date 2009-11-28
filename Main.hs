@@ -15,6 +15,7 @@
 -}
 
 -- TODO: info-ratings.dat.tmp and then move / rename
+-- TODO: set query (parameters as vars) regardless of GET or post
 
 import Data.Bits
 import Data.Char
@@ -151,7 +152,7 @@ writeFooter vars = do
 writeNavigation :: Query -> IO ()
 writeNavigation vars = do
     putStrNl $ "<form method=\"get\" action=\"" ++ url ++ "\" class=\"searchForm\"><div class=\"search\"><input type=\"text\" name=\"search\" class=\"searchBox\" /><input type=\"submit\" value=\"Search\" /><input type=\"reset\" /></div></form><p />"
-    putStrNl $ "<div class=\"navigation\"><a href=\"" ++ url ++ "?action=viewStats\">Records</a> | <a href=\"" ++ url ++ "?action=viewPlayers\">Players</a></div><p class=\"note\">Note: old records may not be shown</p><hr class=\"separator\" /><pre><br /><br /></pre>"
+    putStrNl $ "<div class=\"navigation\"><a href=\"" ++ url ++ "?action=viewStats\">Records</a> | <a href=\"" ++ url ++ "?action=viewPlayers\">Players</a></div><p class=\"note\">Note: very old records may not be shown</p><hr class=\"separator\" /><pre><br /><br /></pre>"
 
 invalid :: Query -> IO ()
 invalid vars = do
@@ -439,8 +440,8 @@ score vars mapname layoutname scoreType numLine (id, scoreLine) = do
                          (MediType) -> numMedis
 
         score     = unintercalate "\x01" scoreLine
-        count     = read $ score !! 0 :: Int
-        time      = read $ score !! 1 :: Int
+        count     = read $ score !! 0  :: Int
+        time      = read $ score !! 1  :: Int
         name      = score !! 2 :: String
         date      = score !! 3 :: String
         guid      = score !! 4 :: String
