@@ -16,8 +16,6 @@
 
 -- TODO: info-ratings.dat.tmp and then move / rename
 -- TODO: set query (parameters as vars) regardless of GET or post
--- TODO: remember to update, or see if there's a mysql command to insert when no conditions meet the update
--- TODO: partial stars
 
 import Data.Bits
 import Data.Char
@@ -372,11 +370,21 @@ printScore vars connection questions first lastMap lastLayout lastType (Score {s
                     rem     = decimal $ (fromIntegral (sum . map (fromSql . head) $ answers :: Int)) / (fromIntegral . length $ answers)
                     fill 11 = return ()
                     fill n  = do
-                        let img   = if n <= average then
-                                        "star.png"
-                                    else
-                                        "faint.png"
-                        putStrNl $ "<form action=\"" ++ url ++ "\" method=\"post\"><fieldset><input type=\"hidden\" name=\"id\" value=\"" ++ show questionID ++ "\" /><input type=\"hidden\" name=\"rating\" value=\"" ++ show n ++ "\" /><input type=\"image\" src=\"" ++ img ++ "\" /></fieldset></form>"
+                        let img        = if n == average + 1 then
+                                             "blank.png"
+                                         else if n <= average then
+                                                  "star.png"
+                                              else
+                                                  "faint.png"
+                            partial    = if n == average + 1 then
+                                             "<div class=\"ratingPartialStar\"><div style=\"width: " ++ show (100 * rem) ++"%;\">"
+                                         else
+                                             ""
+                            partialEnd = if n == average + 1 then
+                                             "</div></div>"
+                                         else
+                                             ""
+                        putStrNl $ "<form action=\"" ++ url ++ "\" method=\"post\"><fieldset>" ++ partial ++ "<input type=\"hidden\" name=\"id\" value=\"" ++ show questionID ++ "\" /><input type=\"hidden\" name=\"rating\" value=\"" ++ show n ++ "\" /><input type=\"image\" src=\"" ++ img ++ "\" />" ++ partialEnd ++ "</fieldset></form>"
                         fill $ succ n
                 putStrNl $ "<div class=\"rating\">"
                 fill 1
