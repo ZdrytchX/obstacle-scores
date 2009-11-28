@@ -136,9 +136,6 @@ main = do
 
     writeHeader query
 
-    putStrNl . show $ query
-    putStrNl $ contents
-
     let action = case Map.lookup "action" query of
                      (Just action) -> action
                      _             -> "invalid"
