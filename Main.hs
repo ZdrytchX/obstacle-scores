@@ -146,7 +146,7 @@ writeFooter vars = do
 writeNavigation :: Query -> IO ()
 writeNavigation vars = do
     putStrNl $ "<form method=\"get\" action=\"" ++ url ++ "\" class=\"searchForm\"><div class=\"search\"><input type=\"text\" name=\"search\" class=\"searchBox\" /><input type=\"submit\" value=\"Search\" /><input type=\"reset\" /></div></form><p />"
-    putStrNl $ "<div class=\"navigation\"><a href=\"" ++ url ++ "?action=viewStats\">Records</a> | <a href=\"" ++ url ++ "?action=viewPlayers\">Players</a></div><hr class=\"separator\" /><pre><br /><br /></pre>"
+    putStrNl $ "<div class=\"navigation\"><a href=\"" ++ url ++ "?action=viewStats\">Records</a> | <a href=\"" ++ url ++ "?action=viewPlayers\">Players</a></div><p class=\"note\">Note: older records might not be shown</p><hr class=\"separator\" /><pre><br /><br /></pre>"
 
 invalid :: Query -> IO ()
 invalid vars = do
@@ -345,8 +345,8 @@ printScore vars first lastMap lastLayout lastType (Score {s_map = m, s_layout = 
                         (ArmType)  -> "<table border=\"1\" cellpadding=\"5\" cellspacing=\"5\" rules=\"rows\" summary=\"scores\" width=\"100%\" class=\"armTable\">"
                         (MediType) -> "<table border=\"1\" cellpadding=\"5\" cellspacing=\"5\" rules=\"rows\" summary=\"scores\" width=\"100%\" class=\"mediTable\">"
         putStrNl $ case t of
-                        (ArmType)  -> "<tr align=\"left\" valign=\"middle\" class=\"armHeader\"><th>#</th> <th>time</th> <th>name</th> <th>date</th></tr>"
-                        (MediType) -> "<tr align=\"left\" valign=\"middle\" class=\"mediHeader\"><th>#</th> <th>Count</th> <th>time</th> <th>name</th> <th>date</th></tr>"
+                        (ArmType)  -> "<tr align=\"left\" valign=\"middle\" class=\"armHeader\"><th>#</th> <th>Time</th> <th>Name</th> <th>Date</th></tr>"
+                        (MediType) -> "<tr align=\"left\" valign=\"middle\" class=\"mediHeader\"><th>#</th> <th>Count</th> <th>Time</th> <th>Name</th> <th>Date</th></tr>"
 
     putStr $ case t of
                   (ArmType)  -> "<tr align=\"left\" valign=\"middle\" class=\"armScore"  ++ num' ++ "\">"
