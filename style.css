@@ -7,19 +7,19 @@ body
 
 a:link
 {
-    color: #777777;
+    color: #111111;
 }
 a:visited
 {
-    color: #777777;
+    color: #111111;
 }
 a:hover
 {
-    color: #777777;
+    color: #111111;
 }
 a:active
 {
-    color: #777777;
+    color: #111111;
 }
 
 .separator
@@ -292,8 +292,37 @@ a:active
 {
 }
 
+.note
+{
+    font-family: "Times New Roman", Times, serif;
+    font-weight: 100;
+    text-align: center;
+}
+
 .search
 {
+}
+
+.rating
+{
+    text-align: center;
+}
+
+div.rating form
+{
+    float: left;
+}
+div.rating form:after
+{
+    clear: left;
+    content: ".";
+    height: 0px;
+    visibility: hidden;
+    display: block;
+}
+div.rating form fieldset
+{
+    border: none;
 }
 
 .searchBox

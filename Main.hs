@@ -14,7 +14,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
 -}
 
--- TODO: links on top; top players, etc.
+-- TODO: info-ratings.dat.tmp and then move / rename
 
 import Data.Bits
 import Data.Char
@@ -36,6 +36,11 @@ import Network.CGI.Monad ()
 import Network.CGI.Protocol (getCGIVars)
 import Network.URI (unEscapeString)
 import Text.Html (toHtml)
+
+import Database.HDBC (disconnect, IConnection, SqlValue, prepare, execute, fetchAllRows, fetchAllRows', fromSql, toSql)
+import Database.HDBC.MySQL (connectMySQL, defaultMySQLConnectInfo, mysqlHost, mysqlDatabase, mysqlUser, mysqlPassword)
+
+import Settings (db)
 
 domain = "http://bobis.boldlygoingnowhere.org/"
 index = "oc-stats/"
@@ -112,8 +117,8 @@ main = do
     vars <- getCGIVars
 
     let query = queryVars $ case List.lookup "QUERY_STRING" vars of
-                                (Just something) -> something
-                                (Nothing)        -> ""
+                                 (Just something) -> something
+                                 (Nothing)        -> ""
 
     writeHeader query
 
@@ -146,7 +151,7 @@ writeFooter vars = do
 writeNavigation :: Query -> IO ()
 writeNavigation vars = do
     putStrNl $ "<form method=\"get\" action=\"" ++ url ++ "\" class=\"searchForm\"><div class=\"search\"><input type=\"text\" name=\"search\" class=\"searchBox\" /><input type=\"submit\" value=\"Search\" /><input type=\"reset\" /></div></form><p />"
-    putStrNl $ "<div class=\"navigation\"><a href=\"" ++ url ++ "?action=viewStats\">Records</a> | <a href=\"" ++ url ++ "?action=viewPlayers\">Players</a></div><p class=\"note\">Note: older records may not be shown</p><hr class=\"separator\" /><pre><br /><br /></pre>"
+    putStrNl $ "<div class=\"navigation\"><a href=\"" ++ url ++ "?action=viewStats\">Records</a> | <a href=\"" ++ url ++ "?action=viewPlayers\">Players</a></div><p class=\"note\">Note: old records may not be shown</p><hr class=\"separator\" /><pre><br /><br /></pre>"
 
 invalid :: Query -> IO ()
 invalid vars = do
@@ -203,10 +208,24 @@ viewStats vars = do
                     putStrNl $ "<hr class=\"separator\" />"
 
                     -- print scores
+
+                    -- connect to DB
+                    connection <- connectMySQL defaultMySQLConnectInfo { mysqlHost = s "host", mysqlDatabase = s "database", mysqlUser = s "user", mysqlPassword = s "password" }
+
+                    statement <- prepare connection $ "SELECT `id`, `mapname`, `layoutname` FROM `" ++ s "prefix" ++ "questions`"
+
+                    execute statement []
+
+                    rows <- fetchAllRows' statement
+                    let questions = rows
+
                     when (not $ List.null search) $ do
                         putStrNl $ "<p class=\"searchReport\">Found " ++ (show $ length scores) ++ " scores with map, layout, score, time, date, or name matching \"" ++ search ++ "\"</p>"
 
-                    printScores vars scores
+                    printScores vars connection questions scores
+
+                    -- disconnect from DB
+                    disconnect connection
         else do
             putStrNl $ "stats directory doesn't exist! (" ++ statsDirectory ++ ")"
 
@@ -315,8 +334,8 @@ printPlayers vars players = do
         else do
             putStrNl "<p class=\"notice\">No players</p>"
 
-printScore :: Query -> Bool -> String -> String -> ScoreType -> Score -> [Score] -> IO ()
-printScore vars first lastMap lastLayout lastType (Score {s_map = m, s_layout = layout, s_type = t, s_num = num, s_maxCount = maxCount, s_count = count, s_time = time, s_name = name, s_date = date}) remainingScores = do
+printScore :: (IConnection connection) => Query -> connection -> [[SqlValue]] -> Bool -> String -> String -> ScoreType -> Score -> [Score] -> IO ()
+printScore vars connection questions first lastMap lastLayout lastType (Score {s_map = m, s_layout = layout, s_type = t, s_num = num, s_maxCount = maxCount, s_count = count, s_time = time, s_name = name, s_date = date}) remainingScores = do
     let countStr = show count ++ " / " ++ show maxCount
         timeStr  = mins' time ++ "m:" ++ secs' time ++ "s:" ++ msec' time ++ "ms"
         nameStr  = colourString . escape $ name
@@ -336,6 +355,33 @@ printScore vars first lastMap lastLayout lastType (Score {s_map = m, s_layout = 
         putStrNl $ "<h1 class=\"map\">High-scores for courses on <b class=\"mapname\">" ++ m ++ "</b></h1>"
     when (first || lastMap /= m || lastLayout /= layout) $ do
         putStrNl $ "<h2 class=\"layoutname\">" ++ layout ++ "</h2>"
+
+        let question_ = (flip filter) questions (\x -> fromSql (x !! 1) == m && fromSql (x !! 2) == layout)
+        if not . null $ question_
+            then do
+                let question   = head question_
+                let questionID = fromSql $ head question :: Int
+                statement <- prepare connection $ "SELECT `rating` FROM `" ++ s "prefix" ++ "answers` WHERE `questionID`=?"
+                execute statement [toSql questionID]
+                rows <- fetchAllRows' statement
+                let answers = rows
+                    average = round $ (fromIntegral (sum . map (fromSql . head) $ answers :: Int)) / (fromIntegral . length $ answers)
+                    fill 11 = return ()
+                    fill n  = do
+                        let img = if n <= average then
+                                      "star.png"
+                                  else
+                                      "dark.png"
+                        putStrNl $ "<form action=\"" ++ url ++ "\" method=\"post\"><fieldset><input type=\"hidden\" name=\"id\" value=\"" ++ show questionID ++ "\" /><input type=\"hidden\" name=\"rating\" value=\"" ++ show n ++ "\" /><input type=\"image\" src=\"" ++ img ++ "\" /></fieldset></form>"
+                        fill $ succ n
+                putStrNl $ "<div class=\"rating\">"
+                fill 1
+                putStrNl $ "</div>"
+            else do
+                statement <- prepare connection $ "INSERT INTO `" ++ s "prefix" ++ "questions` VALUES (NULL, ?, ?)"
+                execute statement [toSql m, toSql layout]
+                return ()
+
     when (first || lastType /= t || lastLayout /= layout) $ do
         putStrNl $ case t of
                         (ArmType)  -> "<h3 class=\"armDescription\">Winning high-scores</h3>"
@@ -370,17 +416,17 @@ printScore vars first lastMap lastLayout lastType (Score {s_map = m, s_layout = 
 
     if (length remainingScores > 0)
         then do
-            printScore vars False m layout t (head remainingScores) (tail remainingScores)
+            printScore vars connection questions False m layout t (head remainingScores) (tail remainingScores)
         else do
             when (not first) $ do
                 putStrNl "</table></div>"
 
 -- the scores need to be sorted already
-printScores :: Query -> [Score] -> IO ()
-printScores vars scores = do
+printScores :: (IConnection connection) => Query -> connection -> [[SqlValue]] -> [Score] -> IO ()
+printScores vars connection questions scores = do
     if length scores > 0
         then do
-            printScore vars True "" "" NoneType (head scores) (tail scores)
+            printScore vars connection questions True "" "" NoneType (head scores) (tail scores)
         else do
             putStrNl "<p class=\"notice\">No scores</p>"
 
@@ -537,17 +583,16 @@ tailAlways :: [a] -> [a]
 tailAlways [] = []
 tailAlways xs = tail xs
 
-splitTwo' :: String -> [(String, String)] -> String -> [(String, String)]
-splitTwo' _ acc [] = acc
-splitTwo' delimiters acc string = splitTwo' delimiters ((former, latter):acc) rest
-    where former = takeWhile isNotDelimiter string
-          latter = takeWhile isNotDelimiter $ nextPart string
-          rest   = takeWhile isNotDelimiter $ nextPart . nextPart $ string
-          isNotDelimiter = (\x -> not $ x `elem` delimiters)
-          nextPart = tailAlways . dropWhile isNotDelimiter
-
 splitTwo :: String -> String -> [(String, String)]
 splitTwo delimiters = splitTwo' delimiters []
+    where splitTwo' :: String -> [(String, String)] -> String -> [(String, String)]
+          splitTwo' _ acc [] = acc
+          splitTwo' delimiters acc string = splitTwo' delimiters ((former, latter):acc) rest
+              where former         = takeWhile isNotDelimiter string
+                    latter         = takeWhile isNotDelimiter $ nextPart string
+                    rest           = takeWhile isNotDelimiter $ nextPart . nextPart $ string
+                    isNotDelimiter = (\x -> not $ x `elem` delimiters)
+                    nextPart       = tailAlways . dropWhile isNotDelimiter
 
 queryVars :: String -> Query
 queryVars = Map.fromList . splitTwo "=&"
@@ -624,12 +669,11 @@ repeatList n xs = take (n * (length xs)) $ cycle xs
 
 colourString :: String -> String
 colourString = colourString' 0
-
-colourString' :: Int -> String -> String
-colourString' n []        = repeatList n "</span>"
-colourString' n ('^':c:s) = colourSpan c ++ colourString' (succ n) s
-colourString' n ('^':_)   = repeatList n "</span>"
-colourString' n (f:l)     = f:l ++ (repeatList n "</span>")
+    where colourString' :: Int -> String -> String
+          colourString' n []        = repeatList n "</span>"
+          colourString' n ('^':c:s) = colourSpan c ++ colourString' (succ n) s
+          colourString' n ('^':_)   = repeatList n "</span>"
+          colourString' n (f:l)     = f:l ++ (repeatList n "</span>")
 
 listTruncate :: Int -> [a] -> [a]
 listTruncate n = reverse . drop n . reverse
@@ -653,5 +697,9 @@ doesDirectoryExist' :: FilePath -> IO Bool
 doesDirectoryExist' filename = do
     realFilename <- resolve filename
     doesDirectoryExist realFilename
+
+s v = case Map.lookup v db of
+           (Just something) -> something
+           (Nothing)        -> error "Couldn't find setting '" ++ v ++ "'"
 
 putStrNl = putStrLn
