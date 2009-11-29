@@ -31,7 +31,7 @@ import Data.ByteString.Internal (c2w)
 
 import System.Posix.Files (getFileStatus, isSymbolicLink, readSymbolicLink)
 import System.FilePath.Posix ((</>))
-import System.IO (hClose, openFile, IOMode (ReadMode), hGetContents, getContents)
+import System.IO (hClose, openFile, IOMode (ReadMode, WriteMode), hGetContents, getContents)
 import System.Time (CalendarTime(..), Month (..), Day (..))
 import System.Random
 
@@ -41,6 +41,7 @@ import Network.CGI.Monad ()
 import Network.CGI.Protocol (getCGIVars, maybeRead)
 import Network.URI (unEscapeString)
 import Text.Html (toHtml)
+import Text.Printf
 
 import Database.HDBC (disconnect, IConnection, SqlValue, prepare, execute, fetchAllRows, fetchAllRows', fromSql, toSql)
 import Database.HDBC.MySQL (connectMySQL, defaultMySQLConnectInfo, mysqlHost, mysqlDatabase, mysqlUser, mysqlPassword)
@@ -53,8 +54,8 @@ url = domain ++ index
 occookieName = "cookie"
 starWidth :: Double
 starWidth = 64
-
 statsDirectory = "/var/www-data/stats"
+infoRatingsFilename = "/var/www/poll/info-ratings.dat"
 
 
 data Score = Score { s_map       :: String
@@ -221,6 +222,13 @@ viewStats vars = do
                     -- connect to DB
                     connection <- connectMySQL defaultMySQLConnectInfo { mysqlHost = s "host", mysqlDatabase = s "database", mysqlUser = s "user", mysqlPassword = s "password" }
 
+                    statement <- prepare connection $ "SELECT `id`, `mapname`, `layoutname` FROM `" ++ s "prefix" ++ "questions`"
+
+                    execute statement []
+
+                    rows <- fetchAllRows' statement
+                    let questions = rows
+
 
                     when (isJust $ Map.lookup "rate" vars) $ do
                         cvars <- getCGIVars
@@ -295,6 +303,14 @@ viewStats vars = do
 
                                         putStrNl $ "<p class=\"ratingNotice\">Your rating of " ++ mapname ++ " " ++ layoutname ++ " was updated from " ++ show previousRating ++ " to " ++ show rating ++ " </p><hr class=\"separator\" />"
 
+                                statement <- prepare connection $ "SELECT `id`, `questionID`, `rating`, `ip`, `cookie` FROM `" ++ s "prefix" ++ "answers`"
+
+                                execute statement []
+
+                                rows <- fetchAllRows' statement
+                                let answers = rows
+                                updateInfoRatings vars questions answers 
+
                     -- print players
                     when (not $ List.null search) $ do
                         putStrNl $ "<p class=\"playerReport\">Found " ++ (show $ length playersUnq) ++ " players with map, layout, score, time, date, or name matching \"" ++ search ++ "\"; showing " ++ show numShowingUnq ++ ".</p>"
@@ -304,13 +320,6 @@ viewStats vars = do
                     putStrNl $ "<hr class=\"separator\" />"
 
                     -- print scores
-
-                    statement <- prepare connection $ "SELECT `id`, `mapname`, `layoutname` FROM `" ++ s "prefix" ++ "questions`"
-
-                    execute statement []
-
-                    rows <- fetchAllRows' statement
-                    let questions = rows
 
                     when (not $ List.null search) $ do
                         putStrNl $ "<p class=\"searchReport\">Found " ++ (show $ length scores) ++ " scores with map, layout, score, time, date, or name matching \"" ++ search ++ "\"</p>"
@@ -458,8 +467,14 @@ printScore vars connection questions first lastMap lastLayout lastType (Score {s
                 execute statement [toSql questionID]
                 rows <- fetchAllRows' statement
                 let answers = rows
-                    average = floor $ (sum . map (fromSql . head) $ answers :: Double) / (fromIntegral . length $ answers)
-                    rem     = decimal $ (sum . map (fromSql . head) $ answers :: Double) / (fromIntegral . length $ answers)
+                    average = if null answers then
+                                  0
+                              else
+                                  floor   $ (sum . map (fromSql . head) $ answers :: Double) / (fromIntegral . length $ answers)
+                    rem     = if null answers then
+                                  0
+                              else
+                                  decimal $ (sum . map (fromSql . head) $ answers :: Double) / (fromIntegral . length $ answers)
                     fill 11 = return ()
                     fill n  = do
                         let img        = if n == average + 1 then
@@ -573,6 +588,29 @@ samePlayerCmp (Score {s_guid = ag, s_ip = ai, s_adminName = aa}) (Score {s_guid 
 
 sl :: [(a, b)] -> [b]
 sl = snd . unzip
+
+updateInfoRatings :: Query -> [[SqlValue]] -> [[SqlValue]] -> IO ()
+updateInfoRatings vars questions answers = do
+    when (not . null $ questions) $ do
+        infoRatingsHandle <- openFile infoRatingsFilename WriteMode
+        updateInfoRatings' vars infoRatingsHandle (tail questions) answers (head questions)
+        hClose infoRatingsHandle
+    where updateInfoRatings' _    _      []        _       _               = return ()
+          updateInfoRatings' vars handle questions answers currentQuestion = do
+          let answers'   = List.filter (\x -> (fromSql (x !! 1)  :: Int) == (fromSql (head currentQuestion)  :: Int)) answers
+              average    = if null answers' then
+                               0
+                           else
+                               floor   $ (sum . map (fromSql . (!! 2)) $ answers' :: Double) / (fromIntegral . length $ answers')
+              rem        = if null answers' then
+                               0
+                           else
+                               decimal $ (sum . map (fromSql . (!! 2)) $ answers' :: Double) / (fromIntegral . length $ answers')
+              mapname    = fromSql $ currentQuestion !! 1  :: String
+              layoutname = fromSql $ currentQuestion !! 2  :: String
+          hPrintf handle "%s %s %2s / 10\n" mapname layoutname (show average)
+          when (not . null $ questions) $ do
+              updateInfoRatings' vars handle (tail questions) answers (head questions)
 
 uniquePlayers :: [Score] -> [Score]
 uniquePlayers = nubBy samePlayer
