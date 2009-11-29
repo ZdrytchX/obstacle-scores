@@ -32,11 +32,13 @@ import Data.ByteString.Internal (c2w)
 import System.Posix.Files (getFileStatus, isSymbolicLink, readSymbolicLink)
 import System.FilePath.Posix ((</>))
 import System.IO (hClose, openFile, IOMode (ReadMode), hGetContents, getContents)
+import System.Time (CalendarTime(..), Month (..), Day (..))
+import System.Random
 
-import Network.CGI
-import Network.CGI.Cookie ()
+import Network.CGI (Cookie(..), newCookie, getCookie, readCookie, setCookie, deleteCookie)
+import Network.CGI.Cookie
 import Network.CGI.Monad ()
-import Network.CGI.Protocol (getCGIVars)
+import Network.CGI.Protocol (getCGIVars, maybeRead)
 import Network.URI (unEscapeString)
 import Text.Html (toHtml)
 
@@ -48,6 +50,9 @@ import Settings (db)
 domain = "http://bobis.boldlygoingnowhere.org/"
 index = "oc-stats/"
 url = domain ++ index
+occookieName = "cookie"
+starWidth :: Double
+starWidth = 64
 
 statsDirectory = "/var/www-data/stats"
 
@@ -216,8 +221,79 @@ viewStats vars = do
                     -- connect to DB
                     connection <- connectMySQL defaultMySQLConnectInfo { mysqlHost = s "host", mysqlDatabase = s "database", mysqlUser = s "user", mysqlPassword = s "password" }
 
+
                     when (isJust $ Map.lookup "rate" vars) $ do
-                        putStrNl $ "<p class=\"ratingNotice\">Rating is TODO!</p>"
+                        cvars <- getCGIVars
+                        stdGen <- getStdGen
+                        let cookies = case Map.lookup "HTTP_COOKIE" vars of
+                                           (Just something) -> something
+                                           (Nothing)        -> ""
+                        let r = take 20 $ randomString stdGen
+                        let cookie_ = findCookie cookies occookieName
+                        when (not . isJust $ cookie_) $ do
+                            --let datetime = CalendarTime 2038 January 1 0 0 0 0 Friday 0 "UTC" 0 False
+                            --setCookie $ Cookie occookieName r (Just datetime) Nothing Nothing False
+                            let script = "function setCookie(n,v,d){var t=new Date();var e=new Date();if(d==null||d==0)d=1;e.setTime(t.gitTime() + 3600000*24*d);document.cookie=n+\"=\"+escape(v)+\";expires=\"+e.toGMTString();}setCookie(" ++ occookieName ++ ", " ++ r ++ ", 500);"
+                            putStrNl $ "<script type=\"text/javascript\"><!--\n" ++ script ++ "//--></script>"
+                            return ()
+
+                        let thecookie = if (not $ isJust cookie_) then fromJust cookie_ else r
+                        let questionID__ = Map.lookup "id" vars
+                        let rating__ = Map.lookup "rating" vars
+                        let offset__ = Map.lookup "x"      vars
+                        when (isJust $ questionID__) $ do
+                            let questionID_ = maybeRead $ fromJust questionID__
+                                ip_         = List.lookup "REMOTE_ADDR" cvars
+                                rating_     = maybeRead $ fromJust rating__
+                                offset_     = case offset__ of
+                                                   (Just x)  -> maybeRead $ fromJust offset__
+                                                   (Nothing) -> Just starWidth
+                            when (isJust questionID_ && isJust ip_ && isJust rating_) $ do
+                                -- continue
+                                let questionID = fromJust questionID_
+                                    ip         = fromJust ip_
+                                    bareRating = fromJust rating_
+                                    offset     = if isJust offset_ && bareRating < 10 && bareRating > 1 then (fromJust offset_) / (starWidth) else 1.0
+                                    rating     = bareRating - 1 + offset  :: Double
+                                statement <- prepare connection $ "SELECT `id`, `rating` FROM `" ++ s "prefix" ++ "answers` WHERE `questionID`=? AND (`ip`=? OR `cookie`=?) LIMIT 1"
+                                execute statement [toSql (questionID :: Int), toSql (ip :: String), toSql (thecookie :: String)]
+                                rows <- fetchAllRows' statement
+                                if length rows == 0
+                                    then do
+                                        statement <- prepare connection $ "SELECT `mapname`, `layoutname`, `id` FROM `" ++ s "prefix" ++ "answers` WHERE `id`=? LIMIT 1"
+                                        execute statement [toSql (questionID :: Int), toSql (ip :: String), toSql (thecookie :: String)]
+                                        rows <- fetchAllRows' statement
+
+                                        when (not . null $ rows) $ do
+                                            let mapname    = fromSql . head . head $ rows    :: String
+                                                layoutname = fromSql . (!! 1) . head $ rows  :: String
+                                                id         = fromSql . (!! 2) . head $ rows  :: Int
+
+                                            statement <- prepare connection $ "INSERT INTO `" ++ s "prefix" ++ "ratings` VALUES (DEFAULT, ?, ?, ?, ?)"
+                                            execute statement [toSql (questionID :: Int), toSql rating, toSql (ip :: String), toSql (thecookie :: String)]
+
+                                            putStrNl $ "<p class=\"ratingNotice\">You gave " ++ mapname ++ " " ++ layoutname ++ " a rating of " ++ show rating ++ " </p><hr class=\"separator\" />"
+                                    else do
+                                        let previousID     = fromSql . head   . head $ rows  :: Int
+                                        let previousRating = fromSql . (!! 1) . head $ rows  :: Double
+
+                                        statement <- prepare connection $ "SELECT `mapname`, `layoutname` FROM `" ++ s "prefix" ++ "answers` WHERE `id`=? LIMIT 1"
+                                        execute statement [toSql (questionID :: Int), toSql (ip :: String), toSql (thecookie :: String)]
+                                        rows <- fetchAllRows' statement
+
+                                        let mapname    = if null rows then
+                                                             ""
+                                                         else
+                                                             fromSql . head . head $ rows
+                                            layoutname = if null rows then
+                                                             ""
+                                                         else
+                                                             fromSql . (!! 1) . head $ rows
+
+                                        statement <- prepare connection $ "UPDATE `" ++ s "prefix" ++ "ratings` SET `rating`=?, `ip`=?, `cookie`=? WHERE `id`=?"
+                                        execute statement [toSql rating, toSql (ip :: String), toSql (thecookie :: String), toSql previousID]
+
+                                        putStrNl $ "<p class=\"ratingNotice\">Your rating of " ++ mapname ++ " " ++ layoutname ++ " was updated from " ++ show previousRating ++ " to " ++ show rating ++ " </p><hr class=\"separator\" />"
 
                     -- print players
                     when (not $ List.null search) $ do
@@ -382,8 +458,8 @@ printScore vars connection questions first lastMap lastLayout lastType (Score {s
                 execute statement [toSql questionID]
                 rows <- fetchAllRows' statement
                 let answers = rows
-                    average = floor $ (fromIntegral (sum . map (fromSql . head) $ answers :: Int)) / (fromIntegral . length $ answers)
-                    rem     = decimal $ (fromIntegral (sum . map (fromSql . head) $ answers :: Int)) / (fromIntegral . length $ answers)
+                    average = floor $ (sum . map (fromSql . head) $ answers :: Double) / (fromIntegral . length $ answers)
+                    rem     = decimal $ (sum . map (fromSql . head) $ answers :: Double) / (fromIntegral . length $ answers)
                     fill 11 = return ()
                     fill n  = do
                         let img        = if n == average + 1 then
@@ -406,7 +482,7 @@ printScore vars connection questions first lastMap lastLayout lastType (Score {s
                 fill 1
                 putStrNl $ "</div>"
             else do
-                statement <- prepare connection $ "INSERT INTO `" ++ s "prefix" ++ "questions` VALUES (NULL, ?, ?)"
+                statement <- prepare connection $ "INSERT INTO `" ++ s "prefix" ++ "questions` VALUES (DEFAULT, ?, ?)"
                 execute statement [toSql m, toSql layout]
                 return ()
 
@@ -734,6 +810,9 @@ doesDirectoryExist' :: FilePath -> IO Bool
 doesDirectoryExist' filename = do
     realFilename <- resolve filename
     doesDirectoryExist realFilename
+
+randomString :: StdGen -> String
+randomString = map ((['0'..'9'] ++ ['A'..'Z'] ++ ['a'..'z']) !!) . randomRs (0, 62)
 
 decimal :: (RealFrac a) => a -> a
 decimal = snd . properFraction
