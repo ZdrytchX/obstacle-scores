@@ -237,7 +237,7 @@ viewStats vars = do
                             putStrNl $ "<script type=\"text/javascript\"><!--\n" ++ script ++ "//--></script>"
                             return ()
 
-                        let thecookie = if (not $ isJust cookie_) then fromJust cookie_ else r
+                        let thecookie = if (isJust cookie_) then fromJust cookie_ else r
                         let questionID__ = Map.lookup "id" vars
                         let rating__ = Map.lookup "rating" vars
                         let offset__ = Map.lookup "x"      vars
