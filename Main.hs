@@ -269,7 +269,7 @@ viewStats vars = do
                                                 layoutname = fromSql . (!! 1) . head $ rows  :: String
                                                 id         = fromSql . (!! 2) . head $ rows  :: Int
 
-                                            statement <- prepare connection $ "INSERT INTO `" ++ s "prefix" ++ "ratings` VALUES (DEFAULT, ?, ?, ?, ?)"
+                                            statement <- prepare connection $ "INSERT INTO `" ++ s "prefix" ++ "answers` VALUES (DEFAULT, ?, ?, ?, ?)"
                                             execute statement [toSql (questionID :: Int), toSql rating, toSql (ip :: String), toSql (thecookie :: String)]
 
                                             putStrNl $ "<p class=\"ratingNotice\">You gave " ++ mapname ++ " " ++ layoutname ++ " a rating of " ++ show rating ++ " </p><hr class=\"separator\" />"
@@ -290,7 +290,7 @@ viewStats vars = do
                                                          else
                                                              fromSql . (!! 1) . head $ rows
 
-                                        statement <- prepare connection $ "UPDATE `" ++ s "prefix" ++ "ratings` SET `rating`=?, `ip`=?, `cookie`=? WHERE `id`=?"
+                                        statement <- prepare connection $ "UPDATE `" ++ s "prefix" ++ "answers` SET `rating`=?, `ip`=?, `cookie`=? WHERE `id`=?"
                                         execute statement [toSql rating, toSql (ip :: String), toSql (thecookie :: String), toSql previousID]
 
                                         putStrNl $ "<p class=\"ratingNotice\">Your rating of " ++ mapname ++ " " ++ layoutname ++ " was updated from " ++ show previousRating ++ " to " ++ show rating ++ " </p><hr class=\"separator\" />"
