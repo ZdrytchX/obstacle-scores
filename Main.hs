@@ -14,10 +14,6 @@
  * If not, see <http://www.gnu.org/licenses/>.
 -}
 
--- TODO: info-ratings.dat.tmp and then move / rename
--- TODO: vars 'x' (10 and 1 are always extreme-most)
--- TODO: reads for '(x|y)'
-
 import Data.Bits
 import Data.Char
 import System.Directory
