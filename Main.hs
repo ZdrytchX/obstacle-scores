@@ -42,16 +42,12 @@ import Text.Printf
 import Database.HDBC (disconnect, IConnection, SqlValue, prepare, execute, fetchAllRows, fetchAllRows', fromSql, toSql)
 import Database.HDBC.MySQL (connectMySQL, defaultMySQLConnectInfo, mysqlHost, mysqlDatabase, mysqlUser, mysqlPassword)
 
-import Settings (db)
+import Settings (db, statsDirectory, infoRatingsFilename, starWidth)
 
 domain = "http://bobis.boldlygoingnowhere.org/"
 index = "oc-stats/"
 url = domain ++ index
 occookieName = "cookie"
-starWidth :: Double
-starWidth = 64
-statsDirectory = "/var/www-data/stats"
-infoRatingsFilename = "/var/www/poll/info-ratings.dat"
 
 
 data Score = Score { s_map       :: String
