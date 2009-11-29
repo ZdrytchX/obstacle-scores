@@ -812,7 +812,7 @@ doesDirectoryExist' filename = do
     doesDirectoryExist realFilename
 
 randomString :: StdGen -> String
-randomString = map ((['0'..'9'] ++ ['A'..'Z'] ++ ['a'..'z']) !!) . randomRs (0, 62)
+randomString = map ((['0'..'9'] ++ ['A'..'Z'] ++ ['a'..'z']) !!) . randomRs (0, 61)
 
 decimal :: (RealFrac a) => a -> a
 decimal = snd . properFraction
