@@ -601,7 +601,7 @@ updateInfoRatings vars questions answers = do
               average    = if null answers' then
                                0
                            else
-                               floor   $ (sum . map (fromSql . (!! 2)) $ answers' :: Double) / (fromIntegral . length $ answers')
+                               round   $ (sum . map (fromSql . (!! 2)) $ answers' :: Double) / (fromIntegral . length $ answers')
               rem        = if null answers' then
                                0
                            else
