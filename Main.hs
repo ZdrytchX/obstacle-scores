@@ -42,10 +42,8 @@ import Text.Printf
 import Database.HDBC (disconnect, IConnection, SqlValue, prepare, execute, fetchAllRows, fetchAllRows', fromSql, toSql)
 import Database.HDBC.MySQL (connectMySQL, defaultMySQLConnectInfo, mysqlHost, mysqlDatabase, mysqlUser, mysqlPassword)
 
-import Settings (db, statsDirectory, infoRatingsFilename, starWidth)
+import Settings (db, statsDirectory, infoRatingsFilename, starWidth, domain, index)
 
-domain = "http://bobis.boldlygoingnowhere.org/"
-index = "oc-stats/"
 url = domain ++ index
 occookieName = "cookie"
 
