@@ -261,7 +261,7 @@ viewStats vars = do
                                 if length rows == 0
                                     then do
                                         statement <- prepare connection $ "SELECT `mapname`, `layoutname`, `id` FROM `" ++ s "prefix" ++ "questions` WHERE `id`=? LIMIT 1"
-                                        execute statement [toSql (questionID :: Int), toSql (ip :: String), toSql (thecookie :: String)]
+                                        execute statement [toSql (questionID :: Int)]
                                         rows <- fetchAllRows' statement
 
                                         when (not . null $ rows) $ do
@@ -278,7 +278,7 @@ viewStats vars = do
                                         let previousRating = fromSql . (!! 1) . head $ rows  :: Double
 
                                         statement <- prepare connection $ "SELECT `mapname`, `layoutname` FROM `" ++ s "prefix" ++ "questions` WHERE `id`=? LIMIT 1"
-                                        execute statement [toSql (questionID :: Int), toSql (ip :: String), toSql (thecookie :: String)]
+                                        execute statement [toSql (questionID :: Int)]
                                         rows <- fetchAllRows' statement
 
                                         let mapname    = if null rows then
