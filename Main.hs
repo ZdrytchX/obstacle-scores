@@ -646,15 +646,15 @@ layoutDir vars mapname layoutname = do
             then do
                 winHandle  <- openFile winFilename ReadMode
                 winData    <- hGetContents winHandle
-                mediHandle <- openFile winFilename ReadMode
+                mediHandle <- openFile mediFilename ReadMode
                 mediData   <- hGetContents mediHandle
 
                 let wAllLines   = List.lines winData
-                    wNumLine    = if length wAllLines > 0 then head wAllLines else []
-                    wScoreLines = if length wAllLines > 0 then tail wAllLines else [[]]
+                    wNumLine    = if null wAllLines then []   else head wAllLines
+                    wScoreLines = if null wAllLines then [[]] else tail wAllLines
                 let mAllLines   = List.lines mediData
-                    mNumLine    = if length mAllLines > 0 then head mAllLines else []
-                    mScoreLines = if length mAllLines > 0 then tail mAllLines else [[]]
+                    mNumLine    = if null mAllLines then []   else head mAllLines
+                    mScoreLines = if null mAllLines then [[]] else tail mAllLines
 
                 let wScoresMaybes = (flip List.map) (zip [1..] wScoreLines) $ score vars mapname layoutname ArmType  wNumLine
                 let mScoresMaybes = (flip List.map) (zip [1..] mScoreLines) $ score vars mapname layoutname MediType mNumLine
@@ -671,8 +671,8 @@ layoutDir vars mapname layoutname = do
                         winData    <- hGetContents winHandle
 
                         let wAllLines   = List.lines winData
-                            wNumLine    = if length wAllLines > 0 then head wAllLines else []
-                            wScoreLines = if length wAllLines > 0 then tail wAllLines else [[]]
+                            wNumLine    = if null wAllLines then []   else head wAllLines
+                            wScoreLines = if null wAllLines then [[]] else tail wAllLines
 
                         let wScoresMaybes = (flip List.map) (zip [1..] wScoreLines) $ score vars mapname layoutname ArmType wNumLine
                         let wScores = catMaybes wScoresMaybes
@@ -682,12 +682,12 @@ layoutDir vars mapname layoutname = do
                     else do
                         if winFileExists
                             then do
-                                mediHandle <- openFile winFilename ReadMode
+                                mediHandle <- openFile mediFilename ReadMode
                                 mediData   <- hGetContents mediHandle
 
                                 let mAllLines   = List.lines mediData
-                                    mNumLine    = if length mAllLines > 0 then head mAllLines else []
-                                    mScoreLines = if length mAllLines > 0 then tail mAllLines else [[]]
+                                    mNumLine    = if null mAllLines then []   else head mAllLines
+                                    mScoreLines = if null mAllLines then [[]] else tail mAllLines
 
                                 let mScoresMaybes = (flip List.map) (zip [1..] mScoreLines) $ score vars mapname layoutname MediType mNumLine
                                 let mScores = catMaybes mScoresMaybes
