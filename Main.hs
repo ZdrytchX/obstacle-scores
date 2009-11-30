@@ -674,7 +674,7 @@ layoutDir vars mapname layoutname = do
 
                         --hClose winHandle
                     else do
-                        if winFileExists
+                        if mediFileExists
                             then do
                                 mediHandle <- openBinaryFile mediFilename ReadMode
                                 mediData   <- hGetContents mediHandle
