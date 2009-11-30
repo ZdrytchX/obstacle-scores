@@ -27,7 +27,7 @@ import Data.ByteString.Internal (c2w)
 
 import System.Posix.Files (getFileStatus, isSymbolicLink, readSymbolicLink)
 import System.FilePath.Posix ((</>))
-import System.IO (hClose, openFile, IOMode (ReadMode, WriteMode), hGetContents, getContents)
+import System.IO (hClose, openBinaryFile, IOMode (ReadMode, WriteMode), hGetContents, getContents)
 import System.Time (CalendarTime(..), Month (..), Day (..))
 import System.Random
 
@@ -582,7 +582,7 @@ sl = snd . unzip
 updateInfoRatings :: Query -> [[SqlValue]] -> [[SqlValue]] -> IO ()
 updateInfoRatings vars questions answers = do
     when (not . null $ questions) $ do
-        infoRatingsHandle <- openFile infoRatingsFilename WriteMode
+        infoRatingsHandle <- openBinaryFile infoRatingsFilename WriteMode
         updateInfoRatings' vars infoRatingsHandle (tail questions) answers (head questions)
         hClose infoRatingsHandle
     where updateInfoRatings' _    _      []        _       _               = return ()
@@ -638,9 +638,9 @@ layoutDir vars mapname layoutname = do
         mediFileExists <- doesFileExist mediFilename
         if winFileExists && mediFileExists
             then do
-                winHandle  <- openFile winFilename ReadMode
+                winHandle  <- openBinaryFile winFilename ReadMode
                 winData    <- hGetContents winHandle
-                mediHandle <- openFile mediFilename ReadMode
+                mediHandle <- openBinaryFile mediFilename ReadMode
                 mediData   <- hGetContents mediHandle
 
                 let wAllLines   = List.lines winData
@@ -661,7 +661,7 @@ layoutDir vars mapname layoutname = do
             else do
                 if winFileExists
                     then do
-                        winHandle  <- openFile winFilename ReadMode
+                        winHandle  <- openBinaryFile winFilename ReadMode
                         winData    <- hGetContents winHandle
 
                         let wAllLines   = List.lines winData
@@ -676,7 +676,7 @@ layoutDir vars mapname layoutname = do
                     else do
                         if winFileExists
                             then do
-                                mediHandle <- openFile mediFilename ReadMode
+                                mediHandle <- openBinaryFile mediFilename ReadMode
                                 mediData   <- hGetContents mediHandle
 
                                 let mAllLines   = List.lines mediData
